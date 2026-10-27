@@ -4,7 +4,7 @@
 
 ## Загрузка
 
-На странице Releases выберите архив для Windows x64, macOS (Apple Silicon или Intel) или Linux x64. Для Debian/Ubuntu доступен `.deb`, для Fedora/openSUSE — `.rpm`; архив Linux подходит для ручной установки в других дистрибутивах. Сборки не подписаны: macOS и Windows могут показать предупреждение о неизвестном разработчике.
+На странице Releases выберите архив для Windows x64, macOS (Apple Silicon или Intel) или Linux x64. Для Debian/Ubuntu доступен `.deb`, для Fedora/openSUSE — `.rpm`, для Arch/Omarchy — пакет pacman; архив Linux подходит для ручной установки в других дистрибутивах. Сборки не подписаны: macOS и Windows могут показать предупреждение о неизвестном разработчике.
 
 ## Поддержка и ограничения
 

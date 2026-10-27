@@ -28,7 +28,7 @@ jobs:
       - run: python -m pip install -r requirements.txt pyinstaller
       - name: Linux build dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb libxcb-cursor0
+        run: sudo apt-get update && sudo apt-get install -y xvfb libxcb-cursor0 libegl1 libopengl0 libpulse0 zstd
       - name: Build
         shell: bash
         run: >-
@@ -65,8 +65,9 @@ jobs:
           printf '#!/bin/sh\nexec /usr/lib/comma-sound/CommaSound "$@"\n' > package/usr/bin/comma-sound
           chmod +x package/usr/bin/comma-sound
           printf '[Desktop Entry]\nType=Application\nName=Comma Sound\nExec=comma-sound\nCategories=Utility;Audio;\nTerminal=false\n' > package/usr/share/applications/comma-sound.desktop
-          fpm -s dir -t deb -n comma-sound -v 0.1.0 --architecture amd64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t rpm -n comma-sound -v 0.1.0 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t deb -n comma-sound -v 0.1.1 --architecture amd64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t rpm -n comma-sound -v 0.1.1 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t pacman -n comma-sound -v 0.1.1 --architecture x86_64 --description 'Sound when typing a comma' -C package .
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
@@ -75,6 +76,7 @@ jobs:
             CommaSound-*.tar.gz
             *.deb
             *.rpm
+            *.pkg.tar.*
           if-no-files-found: error
       - name: Upload release files
         if: startsWith(github.ref, 'refs/tags/')
@@ -83,7 +85,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           files=()
-          for pattern in 'CommaSound-*.zip' 'CommaSound-*.tar.gz' '*.deb' '*.rpm'; do
+          for pattern in 'CommaSound-*.zip' 'CommaSound-*.tar.gz' '*.deb' '*.rpm' '*.pkg.tar.*'; do
             for file in $pattern; do [ -f "$file" ] && files+=("$file"); done
           done
           gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber

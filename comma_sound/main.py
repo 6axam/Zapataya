@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QSettings, Signal, QUrl, Qt
+from PySide6.QtCore import QObject, QSettings, Signal, QUrl, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtMultimedia import QSoundEffect
 from PySide6.QtWidgets import QApplication, QLabel, QMenu, QMessageBox, QSlider, QSystemTrayIcon, QVBoxLayout, QWidget
@@ -89,13 +89,16 @@ class Window(QWidget):
                 mods.discard(key)
             self.listener = keyboard.Listener(on_press=press, on_release=release)
             self.listener.start()
-            if sys.platform == 'darwin' and not self.listener.IS_TRUSTED:
-                self.status.setText('macOS: разрешите мониторинг ввода и Универсальный доступ')
-                self.show()
-            else:
-                self.status.setText('Мониторинг клавиатуры включён')
+            self.status.setText('Мониторинг клавиатуры включён')
+            if sys.platform == 'darwin':
+                QTimer.singleShot(1000, self.check_macos_permission)
         except Exception as error:
             self.status.setText('Не удалось запустить мониторинг: ' + str(error))
+            self.show()
+
+    def check_macos_permission(self):
+        if self.listener and not self.listener.IS_TRUSTED:
+            self.status.setText('macOS: разрешите мониторинг ввода и Универсальный доступ')
             self.show()
 
     def play(self):

@@ -66,9 +66,9 @@ jobs:
           printf '#!/bin/sh\nexec /usr/lib/comma-sound/CommaSound "$@"\n' > package/usr/bin/comma-sound
           chmod +x package/usr/bin/comma-sound
           printf '[Desktop Entry]\nType=Application\nName=Comma Sound\nExec=comma-sound\nCategories=Utility;Audio;\nTerminal=false\n' > package/usr/share/applications/comma-sound.desktop
-          fpm -s dir -t deb -n comma-sound -v 0.1.3 --architecture amd64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t rpm -n comma-sound -v 0.1.3 --architecture x86_64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t pacman -n comma-sound -v 0.1.3 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t deb -n comma-sound -v 0.1.4 --architecture amd64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t rpm -n comma-sound -v 0.1.4 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t pacman -n comma-sound -v 0.1.4 --architecture x86_64 --description 'Sound when typing a comma' -C package .
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

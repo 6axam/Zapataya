@@ -33,16 +33,16 @@ jobs:
         shell: bash
         run: >-
           ${{ runner.os == 'Linux' && 'xvfb-run -a' || '' }} python -m PyInstaller --noconfirm --clean --windowed --name CommaSound
-          --collect-submodules pynput --add-data "assets${{ runner.os == 'Windows' && ';' || ':' }}assets"
+          ${{ runner.os == 'macOS' && '--onedir' || '--onefile' }} --collect-submodules pynput --add-data "assets${{ runner.os == 'Windows' && ';' || ':' }}assets"
           comma_sound/main.py
       - name: Smoke test Linux
         if: runner.os == 'Linux'
-        run: QT_QPA_PLATFORM=offscreen ./dist/CommaSound/CommaSound --self-test
+        run: QT_QPA_PLATFORM=offscreen ./dist/CommaSound --self-test
       - name: Smoke test Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $process = Start-Process -FilePath 'dist/CommaSound/CommaSound.exe' -ArgumentList '--self-test' -Wait -PassThru
+          $process = Start-Process -FilePath 'dist/CommaSound.exe' -ArgumentList '--self-test' -Wait -PassThru
           if ($process.ExitCode -ne 0) { exit $process.ExitCode }
       - name: Smoke test macOS
         if: runner.os == 'macOS'
@@ -50,29 +50,32 @@ jobs:
       - name: Package Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path dist/CommaSound -DestinationPath CommaSound-${{ matrix.target }}.zip
+        run: Copy-Item dist/CommaSound.exe CommaSound-${{ matrix.target }}.exe
       - name: Package macOS
         if: runner.os == 'macOS'
         run: ditto -c -k --sequesterRsrc --keepParent dist/CommaSound.app CommaSound-${{ matrix.target }}.zip
       - name: Package Linux
         if: runner.os == 'Linux'
         run: |
+          cp dist/CommaSound CommaSound-${{ matrix.target }}
           tar czf CommaSound-${{ matrix.target }}.tar.gz -C dist CommaSound
           sudo apt-get update && sudo apt-get install -y ruby ruby-dev rpm
           sudo gem install fpm --no-document
           mkdir -p package/usr/lib/comma-sound package/usr/bin package/usr/share/applications
-          cp -a dist/CommaSound/. package/usr/lib/comma-sound/
+          cp dist/CommaSound package/usr/lib/comma-sound/CommaSound
           printf '#!/bin/sh\nexec /usr/lib/comma-sound/CommaSound "$@"\n' > package/usr/bin/comma-sound
           chmod +x package/usr/bin/comma-sound
           printf '[Desktop Entry]\nType=Application\nName=Comma Sound\nExec=comma-sound\nCategories=Utility;Audio;\nTerminal=false\n' > package/usr/share/applications/comma-sound.desktop
-          fpm -s dir -t deb -n comma-sound -v 0.1.2 --architecture amd64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t rpm -n comma-sound -v 0.1.2 --architecture x86_64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t pacman -n comma-sound -v 0.1.2 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t deb -n comma-sound -v 0.1.3 --architecture amd64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t rpm -n comma-sound -v 0.1.3 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t pacman -n comma-sound -v 0.1.3 --architecture x86_64 --description 'Sound when typing a comma' -C package .
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
           path: |
             CommaSound-*.zip
+            CommaSound-*.exe
+            CommaSound-linux-x64
             CommaSound-*.tar.gz
             *.deb
             *.rpm
@@ -85,7 +88,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           files=()
-          for pattern in 'CommaSound-*.zip' 'CommaSound-*.tar.gz' '*.deb' '*.rpm' '*.pkg.tar.*'; do
+          for pattern in 'CommaSound-*.zip' 'CommaSound-*.exe' 'CommaSound-linux-x64' 'CommaSound-*.tar.gz' '*.deb' '*.rpm' '*.pkg.tar.*'; do
             for file in $pattern; do [ -f "$file" ] && files+=("$file"); done
           done
           gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber

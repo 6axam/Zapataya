@@ -4,7 +4,7 @@
 
 ## Загрузка
 
-На странице Releases выберите архив для Windows x64, macOS (Apple Silicon или Intel) или Linux x64. Для Debian/Ubuntu доступен `.deb`, для Fedora/openSUSE — `.rpm`, для Arch/Omarchy — пакет pacman; архив Linux подходит для ручной установки в других дистрибутивах. Сборки не подписаны: macOS и Windows могут показать предупреждение о неизвестном разработчике.
+На странице Releases выберите отдельный `.exe` для Windows x64, архив с `.app` для macOS (Apple Silicon или Intel) или исполняемый файл для Linux x64. В Linux после скачивания выполните `chmod +x CommaSound-linux-x64`. Для Debian/Ubuntu доступен `.deb`, для Fedora/openSUSE — `.rpm`, для Arch/Omarchy — пакет pacman; архив Linux подходит для ручной установки в других дистрибутивах. Сборки не подписаны: macOS и Windows могут показать предупреждение о неизвестном разработчике.
 
 ## Поддержка и ограничения
 

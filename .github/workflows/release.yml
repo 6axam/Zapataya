@@ -38,6 +38,14 @@ jobs:
       - name: Smoke test Linux
         if: runner.os == 'Linux'
         run: QT_QPA_PLATFORM=offscreen ./dist/CommaSound --self-test
+      - name: Sign Windows executable when configured
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_ENABLED: ${{ vars.WINDOWS_SIGNING_ENABLED }}
+          WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: ./scripts/sign-windows.ps1 -File dist/CommaSound.exe
       - name: Smoke test Windows
         if: runner.os == 'Windows'
         shell: pwsh

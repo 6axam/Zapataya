@@ -1,0 +1,47 @@
+name: Test Windows signing setup
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/sign-windows.ps1'
+      - '.github/workflows/windows-signing-test.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test unsigned mode and fail-closed configuration
+        shell: pwsh
+        run: |
+          $env:WINDOWS_SIGNING_ENABLED = 'false'
+          ./scripts/sign-windows.ps1 -File missing.exe
+          $env:WINDOWS_SIGNING_ENABLED = 'true'
+          try { ./scripts/sign-windows.ps1 -File missing.exe; throw 'Expected missing credentials to fail' }
+          catch { if ($_.Exception.Message -notmatch 'certificate or password is missing') { throw } }
+      - name: Test signing and verification with a temporary test certificate
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=CommaSound temporary CI test' -CertStoreLocation Cert:\CurrentUser\My
+          $root = $null
+          try {
+            $publicPath = Join-Path $env:RUNNER_TEMP 'test.cer'
+            $pfxPath = Join-Path $env:RUNNER_TEMP 'test.pfx'
+            $testPassword = 'TemporaryTestPassword123!'
+            $password = ConvertTo-SecureString $testPassword -AsPlainText -Force
+            Export-Certificate -Cert $cert -FilePath $publicPath | Out-Null
+            Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $password | Out-Null
+            $root = Import-Certificate -FilePath $publicPath -CertStoreLocation Cert:\CurrentUser\Root
+            $env:WINDOWS_SIGNING_ENABLED = 'true'
+            $env:WINDOWS_CERTIFICATE_PFX_BASE64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($pfxPath))
+            $env:WINDOWS_CERTIFICATE_PASSWORD = $testPassword
+            $file = Join-Path $env:RUNNER_TEMP 'test.exe'
+            Copy-Item (Get-Command where.exe).Source $file
+            ./scripts/sign-windows.ps1 -File $file
+            if ((Get-AuthenticodeSignature $file).Status -ne 'Valid') { throw 'Signed test file is not valid.' }
+          } finally {
+            if ($root) { $root | Remove-Item -ErrorAction SilentlyContinue }
+            Get-Item ("Cert:\CurrentUser\My\" + $cert.Thumbprint) -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
+            Remove-Item $publicPath,$pfxPath,$file -Force -ErrorAction SilentlyContinue
+          }

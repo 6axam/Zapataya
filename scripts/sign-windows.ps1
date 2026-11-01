@@ -12,9 +12,9 @@ if (-not $env:WINDOWS_CERTIFICATE_PFX_BASE64 -or -not $env:WINDOWS_CERTIFICATE_P
 }
 
 $sdkBin = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
-$signTool = Get-ChildItem $sdkBin -Filter signtool.exe -Recurse -File |
-    Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
-    Sort-Object FullName -Descending | Select-Object -First 1
+$signTool = Get-ChildItem $sdkBin -Directory | Sort-Object Name -Descending |
+    ForEach-Object { Join-Path $_.FullName 'x64\signtool.exe' } |
+    Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $signTool) { throw 'Windows SDK signtool.exe was not found.' }
 
 $pfxPath = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString() + '.pfx')
@@ -24,9 +24,9 @@ try {
     $password = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
     $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password
     if (@($cert).Count -ne 1 -or -not $cert.HasPrivateKey) { throw 'Expected exactly one certificate with a private key.' }
-    & $signTool.FullName sign /fd SHA256 /sha1 $cert.Thumbprint /tr 'http://timestamp.digicert.com' /td SHA256 $File
+    & $signTool sign /fd SHA256 /sha1 $cert.Thumbprint /tr 'http://timestamp.digicert.com' /td SHA256 $File
     if ($LASTEXITCODE -ne 0) { throw "SignTool signing failed: $LASTEXITCODE" }
-    & $signTool.FullName verify /pa /all /v $File
+    & $signTool verify /pa /all /v $File
     if ($LASTEXITCODE -ne 0) { throw "Windows did not trust the signature: $LASTEXITCODE" }
     $signature = Get-AuthenticodeSignature -FilePath $File
     if ($signature.Status -ne 'Valid') { throw "Signature is not trusted: $($signature.Status)" }

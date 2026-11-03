@@ -22,22 +22,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          python-version: '3.11'
-      - run: python -m pip install -r requirements.txt pyinstaller
+          components: rustfmt, clippy
       - name: Linux build dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb libxcb-cursor0 libegl1 libopengl0 libpulse0 zstd libarchive-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libgtk-3-dev libxdo-dev libxtst-dev libx11-dev libxkbcommon-dev libxkbcommon-x11-dev libayatana-appindicator3-dev rpm ruby ruby-dev zstd libarchive-tools
+          sudo gem install fpm --no-document
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - name: Test
+        run: cargo test --locked --all-targets
       - name: Build
-        shell: bash
-        run: >-
-          ${{ runner.os == 'Linux' && 'xvfb-run -a' || '' }} python -m PyInstaller --noconfirm --clean --windowed --name CommaSound
-          ${{ runner.os == 'macOS' && '--onedir' || '--onefile' }} --collect-submodules pynput --add-data "assets${{ runner.os == 'Windows' && ';' || ':' }}assets"
-          comma_sound/main.py
-      - name: Smoke test Linux
-        if: runner.os == 'Linux'
-        run: QT_QPA_PLATFORM=offscreen ./dist/CommaSound --self-test
+        run: cargo build --locked --release --bins
       - name: Sign Windows executable when configured
         if: runner.os == 'Windows'
         shell: pwsh
@@ -45,38 +44,40 @@ jobs:
           WINDOWS_SIGNING_ENABLED: ${{ vars.WINDOWS_SIGNING_ENABLED }}
           WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        run: ./scripts/sign-windows.ps1 -File dist/CommaSound.exe
+        run: ./scripts/sign-windows.ps1 -File target/release/comma-sound.exe
       - name: Smoke test Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $process = Start-Process -FilePath 'dist/CommaSound.exe' -ArgumentList '--self-test' -Wait -PassThru
-          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-      - name: Smoke test macOS
-        if: runner.os == 'macOS'
-        run: QT_QPA_PLATFORM=offscreen ./dist/CommaSound.app/Contents/MacOS/CommaSound --self-test
-      - name: Package Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Copy-Item dist/CommaSound.exe CommaSound-${{ matrix.target }}.exe
+          $p = Start-Process -FilePath 'target/release/comma-sound.exe' -ArgumentList '--self-test' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { exit $p.ExitCode }
+          Copy-Item target/release/comma-sound.exe CommaSound-${{ matrix.target }}.exe
       - name: Package macOS
         if: runner.os == 'macOS'
-        run: ditto -c -k --sequesterRsrc --keepParent dist/CommaSound.app CommaSound-${{ matrix.target }}.zip
+        run: |
+          ./target/release/comma-sound --self-test
+          mkdir -p CommaSound.app/Contents/MacOS
+          cp target/release/comma-sound CommaSound.app/Contents/MacOS/CommaSound
+          cp packaging/Info.plist CommaSound.app/Contents/Info.plist
+          ditto -c -k --sequesterRsrc --keepParent CommaSound.app CommaSound-${{ matrix.target }}.zip
       - name: Package Linux
         if: runner.os == 'Linux'
         run: |
-          cp dist/CommaSound CommaSound-${{ matrix.target }}
-          tar czf CommaSound-${{ matrix.target }}.tar.gz -C dist CommaSound
-          sudo apt-get update && sudo apt-get install -y ruby ruby-dev rpm
-          sudo gem install fpm --no-document
-          mkdir -p package/usr/lib/comma-sound package/usr/bin package/usr/share/applications
-          cp dist/CommaSound package/usr/lib/comma-sound/CommaSound
-          printf '#!/bin/sh\nexec /usr/lib/comma-sound/CommaSound "$@"\n' > package/usr/bin/comma-sound
-          chmod +x package/usr/bin/comma-sound
+          target/release/comma-sound --self-test
+          cp target/release/comma-sound CommaSound-linux-x64
+          mkdir -p CommaSound-linux/hyprland CommaSound-linux/assets
+          cp target/release/comma-sound target/release/comma-control CommaSound-linux/
+          cp hyprland/install.sh hyprland/BarWidget.qml hyprland/manifest.json CommaSound-linux/hyprland/
+          cp assets/sound.wav CommaSound-linux/assets/
+          tar czf CommaSound-linux-x64.tar.gz CommaSound-linux
+          mkdir -p package/usr/bin package/usr/lib/comma-sound package/usr/share/applications
+          cp target/release/comma-sound package/usr/bin/comma-sound
+          cp target/release/comma-control package/usr/bin/comma-control
+          cp assets/sound.wav package/usr/lib/comma-sound/sound.wav
           printf '[Desktop Entry]\nType=Application\nName=Comma Sound\nExec=comma-sound\nCategories=Utility;Audio;\nTerminal=false\n' > package/usr/share/applications/comma-sound.desktop
-          fpm -s dir -t deb -n comma-sound -v 0.1.4 --architecture amd64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t rpm -n comma-sound -v 0.1.4 --architecture x86_64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t pacman -n comma-sound -v 0.1.4 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t deb -n comma-sound -v 0.2.0 --architecture amd64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t rpm -n comma-sound -v 0.2.0 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t pacman -n comma-sound -v 0.2.0 --architecture x86_64 --description 'Sound when typing a comma' -C package .
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

@@ -8,7 +8,7 @@ BarWidget {
   moduleName: "maks.comma-sound"
   property bool enabledSound: true
   property int volume: 50
-  readonly property string control: Quickshell.env("HOME") + "/.local/share/comma-sound/control.py"
+  readonly property string control: Quickshell.env("HOME") + "/.local/share/comma-sound/comma-control"
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
   function refresh() { if (!readState.running) readState.running = true }

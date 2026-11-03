@@ -61,9 +61,9 @@ pub fn data_dir() -> PathBuf {
     }
     #[cfg(target_os = "linux")]
     {
-        return dirs::home_dir()
+        dirs::home_dir()
             .unwrap_or_default()
-            .join(".local/share/comma-sound");
+            .join(".local/share/comma-sound")
     }
     #[cfg(not(target_os = "linux"))]
     {

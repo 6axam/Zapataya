@@ -33,6 +33,8 @@ jobs:
           sudo gem install fpm --no-document
       - name: Check formatting
         run: cargo fmt --all --check
+      - name: Lint
+        run: cargo clippy --locked --all-targets -- -D warnings
       - name: Test
         run: cargo test --locked --all-targets
       - name: Build
@@ -75,9 +77,9 @@ jobs:
           cp target/release/comma-control package/usr/bin/comma-control
           cp assets/sound.wav package/usr/lib/comma-sound/sound.wav
           printf '[Desktop Entry]\nType=Application\nName=Comma Sound\nExec=comma-sound\nCategories=Utility;Audio;\nTerminal=false\n' > package/usr/share/applications/comma-sound.desktop
-          fpm -s dir -t deb -n comma-sound -v 0.2.0 --architecture amd64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t rpm -n comma-sound -v 0.2.0 --architecture x86_64 --description 'Sound when typing a comma' -C package .
-          fpm -s dir -t pacman -n comma-sound -v 0.2.0 --architecture x86_64 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t deb -n comma-sound -v 0.2.0 --architecture amd64 -d libasound2 -d libgtk-3-0 -d libayatana-appindicator3-1 -d libxtst6 -d libxdo3 -d libxkbcommon0 -d libxkbcommon-x11-0 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t rpm -n comma-sound -v 0.2.0 --architecture x86_64 -d alsa-lib -d gtk3 -d libXtst -d xdotool -d libxkbcommon -d libxkbcommon-x11 --description 'Sound when typing a comma' -C package .
+          fpm -s dir -t pacman -n comma-sound -v 0.2.0 --architecture x86_64 -d alsa-lib -d gtk3 -d libayatana-appindicator -d libxtst -d xdotool -d libxkbcommon -d libxkbcommon-x11 --description 'Sound when typing a comma' -C package .
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
